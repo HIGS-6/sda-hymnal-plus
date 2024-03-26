@@ -13,9 +13,10 @@
   }
   const pb = new PocketBase("https://sda-api.pockethost.io/");
 
-  let currentHymn: Hymn | String = "SDA Hymnal+";
+  let currentHymn: Hymn | undefined;
   let inputHymnNumber = 1;
   let currentStanzaIdx = 0;
+  let currentHymnNumber = "";
 
   async function getHymn() {
     currentStanzaIdx = 0;
@@ -51,7 +52,7 @@
     }
   }
 
-  function getStanza(number: number, hymn: Hymn): Array<String> {
+  function getStanzaInfo(number: number, hymn: Hymn): Array<String> {
     let lyricValues = Array.from(hymn.lyrics.values());
     let lyricKeys = Array.from(hymn.lyrics.keys());
 
@@ -66,15 +67,36 @@
 
   document.addEventListener(
     "keydown",
-    (event) => {
-      if (currentHymn instanceof Hymn === false) return;
-
+    async (event) => {
       var codeValue = event.code;
+      var key = event.key;
+
+      // Key Pressed is a number so its appended to the current number
+      if (!Number.isNaN(parseInt(key))) {
+        currentHymnNumber += key;
+      }
+      // Backspace is pressed, so the last digit of the number is deleted
+      else if (codeValue === "Backspace") {
+        currentHymnNumber = currentHymnNumber.slice(0, -1);
+      }
+      // Enter pressed so, the current number is used to load the hymn
+      else if (codeValue === "Enter") {
+        inputHymnNumber = parseInt(currentHymnNumber);
+        await getHymn();
+        currentHymnNumber = "";
+      }
+
+      console.log(`Current Hymn Number: ${currentHymnNumber}`);
+
+      if (!currentHymn) return;
+      // Left arrow pressed, so previous stanza is shown
       if (codeValue === "ArrowLeft") {
         if (currentStanzaIdx > 0) {
           currentStanzaIdx--;
         }
-      } else if (codeValue === "ArrowRight") {
+      }
+      // Right arrow pressed, so next stanza is shown
+      else if (codeValue === "ArrowRight") {
         if (currentStanzaIdx + 1 < currentHymn.lyrics.size) {
           currentStanzaIdx++;
         }
@@ -85,29 +107,30 @@
 </script>
 
 <main class="container">
-  <div class="center">
-    <form
-      on:submit|preventDefault={async () => {
-        await getHymn();
-      }}
-    >
-      <input bind:value={inputHymnNumber} type="number" name="hymnNumber" />
-      <input type="submit" value="Load Hymn" />
-    </form>
-
-    {#if currentHymn instanceof Hymn}
-      <h1>{`${currentHymn.number} | ${currentHymn.title}`}</h1>
-      <p class="stanza">{`${getStanza(currentStanzaIdx, currentHymn)[0]} | ${getStanza(currentStanzaIdx, currentHymn)[1]}`}</p>
-    {:else}
-      <h1>{currentHymn}</h1>
-    {/if}
-  </div>
+  <!-- <div class="center"> -->
+  {#if currentHymn instanceof Hymn}
+    <ul class="center">
+      {#each getStanzaInfo(currentStanzaIdx, currentHymn)[1].split("\n") as line, _}
+        <p class="stanza">{line}</p>
+      {/each}
+    </ul>
+    <h3 style="text-align: center;">
+      {getStanzaInfo(currentStanzaIdx, currentHymn)[0]}
+    </h3>
+  {:else}
+    <h1 style="font-size: 100px;">SDA Hymnal+</h1>
+  {/if}
+  <!-- </div> -->
 </main>
 
 <style>
   .stanza {
-    font-size: 25px;
+    font-size: 75px;
     font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
-    text-align: center;
+    text-align: left;
+    list-style: none;
+  }
+  .center {
+    margin: auto;
   }
 </style>
