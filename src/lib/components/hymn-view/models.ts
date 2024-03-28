@@ -7,11 +7,22 @@ export class Slide {
   }
 }
 
+export class Hymnal {
+  id: string;
+  name: string;
+  language: string;
+  constructor(id: string, name: string, language: string) {
+    this.id = id;
+    this.name = name;
+    this.language = language;
+  }
+}
+
 export class Hymn {
   title: string;
   number: number;
-  lyrics: Map<String, String>;
-  constructor(title: string, number: number, lyrics: Map<String, String>) {
+  lyrics: Map<string, string>;
+  constructor(title: string, number: number, lyrics: Map<string, string>) {
     this.title = title;
     this.number = number;
     this.lyrics = lyrics;
