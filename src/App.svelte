@@ -4,6 +4,7 @@
     Hymn,
     HymnView,
     Hymnal,
+    Slide,
     getHymn,
     getHymnals,
   } from "./lib/components/hymn-view";
@@ -19,7 +20,7 @@
   } from "./lib/store";
   import { getHymnEquivalency } from "./lib/components/hymn-view/sda-api";
 
-  let availableHymnals: Array<Hymnal> = [];
+  let availableHymnals: Hymnal[] = [];
   let numbersPressed = "";
 
   async function handleInput(event: KeyboardEvent) {
@@ -39,6 +40,8 @@
         numbersPressed = numbersPressed.slice(0, -1);
         break;
       case "Enter":
+        if (parseInt(numbersPressed) <= 0) return;
+
         mainHymn.set(
           (await getHymn(
             parseInt(numbersPressed),
@@ -47,19 +50,8 @@
         );
         mainHymnSlides.set($mainHymn.getSlides());
         numbersPressed = "";
-        break;
-      case "ArrowLeft":
-        if ($mainHymnSlideIndex > 0)
-          mainHymnSlideIndex.update((val) => (val -= 1));
-        break;
-      case "ArrowRight":
-        if ($mainHymnSlideIndex + 1 < $mainHymnSlides.length)
-          mainHymnSlideIndex.update((val) => (val += 1));
-        break;
-      case "KeyS":
-        dualView.update((val) => (val = !val)); // Switch Dual View
 
-        if ($equivalentHymn === undefined) {
+        if ($dualView) {
           console.log("Looking for equivalency for");
 
           let hymn = await getHymnEquivalency(
@@ -70,10 +62,53 @@
 
           if (hymn instanceof Hymn) {
             equivalentHymn.set(hymn);
+            equivalentHymnSlides.set($equivalentHymn?.getSlides() as Slide[]);
+
+            equivalentHymnSlideIndex.set(0);
           } else {
-            console.log("No Equivalent Hymn for this one sorry...");
+            console.log(`No Equivalent Hymn: ${hymn}`);
           }
-        } else equivalentHymnSlides.set($equivalentHymn.getSlides());
+        } else {
+          equivalentHymn.set(undefined);
+        }
+
+        break;
+      case "ArrowLeft":
+        if ($mainHymnSlideIndex > 0)
+          mainHymnSlideIndex.update((val) => (val -= 1));
+        if ($dualView) {
+          if ($equivalentHymnSlideIndex > 0)
+            equivalentHymnSlideIndex.update((val) => (val -= 1));
+        }
+        break;
+      case "ArrowRight":
+        if ($mainHymnSlideIndex + 1 < $mainHymnSlides.length)
+          mainHymnSlideIndex.update((val) => (val += 1));
+        if ($dualView) {
+          if ($equivalentHymnSlideIndex + 1 < $equivalentHymnSlides.length)
+            equivalentHymnSlideIndex.update((val) => (val += 1));
+        }
+        break;
+      case "KeyS":
+        dualView.update((val) => (val = !val)); // Switch Dual View
+
+        if ($equivalentHymn === undefined && $mainHymn) {
+          console.log("Looking for equivalency for");
+
+          let hymn = await getHymnEquivalency(
+            $mainHymn.number,
+            availableHymnals[0],
+            availableHymnals[1],
+          );
+
+          if (hymn instanceof Hymn) {
+            equivalentHymn.set(hymn);
+            equivalentHymnSlideIndex.set(0);
+          } else {
+            console.log(`No Equivalent Hymn: ${hymn}`);
+          }
+        } else
+          equivalentHymnSlides.set($equivalentHymn?.getSlides() as Slide[]);
 
         break;
     }

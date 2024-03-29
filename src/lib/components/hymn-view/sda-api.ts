@@ -57,18 +57,20 @@ export async function getHymnals(): Promise<Hymnal[] | string> {
 }
 
 export async function getHymnEquivalency(number: number, originalHymnal: Hymnal, equivalentHymnal: Hymnal): Promise<Hymn | string> {
-  // What's Hymn 100 from Hymnal "SDA Hymnal (1985)"  in the Spanish Hymnal "Himnario Adventista (2010)"? - 55
   try {
     const result = await pb.collection("hymn_equivalencies").getFirstListItem(
-      `originalHymnNumber=${number}&&originalVersion="${originalHymnal.id}"&&
-      equivalentVersion="${equivalentHymnal.id}"||equivalentHymnNumber=${number}&&
-      equivalentVersion="${originalHymnal.id}"&&originalVersion="${equivalentHymnal.id}"
-      `
+      `originalHymnNumber=${number}&&originalVersion.id="${originalHymnal.id}"&&equivalentVersion.id="${equivalentHymnal.id}" || equivalentHymnNumber=${number}&&equivalentVersion.id="${originalHymnal.id}"&&originalVersion.id="${equivalentHymnal.id}"`
     );
 
+    console.log(`Equivalent Hymn Fetched, Retrieving\n${result}`);
 
-    let hymn = await getHymn(number === result.originalHymnNumber ? result.equivalentHymnNumber : number, number === result.originalHymnNumber ? equivalentHymnal : originalHymnal) as Hymn;
-    console.log(`Equivalent Hymn is: ${hymn.title}`);
+    let hymn;
+    if (number === result.originalHymnNumber) {
+      hymn = await getHymn(result.equivalentHymnNumber, equivalentHymnal);
+    }
+    else {
+      hymn = await getHymn(result.originalHymnNumber, equivalentHymnal);
+    }
 
     return hymn;
   } catch (e) {

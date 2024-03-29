@@ -26,7 +26,7 @@ export class Hymn {
     this.title = title;
     this.number = number;
     this.lyrics = lyrics;
-  } 
+  }
 
   getSlides(): Array<Slide> {
     const slides = [new Slide(`${this.number} | ${this.title}`, '')];
@@ -41,13 +41,13 @@ export class Hymn {
         // Refrain
         refrainSlide = new Slide(content, context);
       }
-      else{
+      else {
         // Stanza
         stanzas.push(new Slide(content, context));
       }
     }
-    
-    // Put Refrain in front of each stanza
+
+    // Insert Refrain in front of each stanza
     if (refrainSlide) {
       const magicNum = stanzas.length * 2;
       for (let i = 0; i < magicNum; i++) {
@@ -56,7 +56,7 @@ export class Hymn {
         }
       }
     }
-    
+
     slides.push(...stanzas);
 
     return slides;

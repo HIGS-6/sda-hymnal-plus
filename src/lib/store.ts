@@ -7,7 +7,7 @@ export let dualView = writable(false);
 
 // Hymns
 export let mainHymn = writable<Hymn>();
-export let equivalentHymn = writable<Hymn>();
+export let equivalentHymn = writable<Hymn | undefined>();
 
 // Slides
 export let mainHymnSlides = writable<Slide[]>();
