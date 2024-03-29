@@ -17,6 +17,7 @@
     mainHymnSlideIndex,
     mainHymnSlides,
   } from "./lib/store";
+  import { getHymnEquivalency } from "./lib/components/hymn-view/sda-api";
 
   let availableHymnals: Array<Hymnal> = [];
   let numbersPressed = "";
@@ -25,46 +26,56 @@
     const codeValue = event.code;
     const key = event.key;
 
-    console.log(`Key Pressed: ${codeValue}.`);
+    // console.log(`Key Pressed: ${codeValue}`);
 
-    // Key Pressed is a number so its appended to the current number
+    // Number Changed
     if (!Number.isNaN(parseInt(key))) {
       numbersPressed += key;
-    }
-    // Backspace is pressed, so the last digit of the number is deleted
-    else if (codeValue === "Backspace") {
-      numbersPressed = numbersPressed.slice(0, -1);
-    }
-    // Enter pressed so, the current number is used to load the Main Hymn and its slides
-    else if (codeValue === "Enter") {
-      console.log("Loading Hymn...");
-
-      let hymn = (await getHymn(
-        parseInt(numbersPressed),
-        availableHymnals[0],
-      )) as Hymn;
-      mainHymn.set(hymn);
-
-      mainHymnSlides.set($mainHymn.getSlides());
-
-      numbersPressed = "";
       return;
     }
 
-    // Left arrow pressed, so previous stanza is shown
-    if (codeValue === "ArrowLeft" && $mainHymnSlideIndex > 0) {
-      console.log("Main Hymn Slide Index Going Down!");
+    switch (codeValue) {
+      case "Backspace":
+        numbersPressed = numbersPressed.slice(0, -1);
+        break;
+      case "Enter":
+        mainHymn.set(
+          (await getHymn(
+            parseInt(numbersPressed),
+            availableHymnals[0],
+          )) as Hymn,
+        );
+        mainHymnSlides.set($mainHymn.getSlides());
+        numbersPressed = "";
+        break;
+      case "ArrowLeft":
+        if ($mainHymnSlideIndex > 0)
+          mainHymnSlideIndex.update((val) => (val -= 1));
+        break;
+      case "ArrowRight":
+        if ($mainHymnSlideIndex + 1 < $mainHymnSlides.length)
+          mainHymnSlideIndex.update((val) => (val += 1));
+        break;
+      case "KeyS":
+        dualView.update((val) => (val = !val)); // Switch Dual View
 
-      mainHymnSlideIndex.update((val) => (val -= 1));
-    }
-    // Right arrow pressed, so next stanza is shown
-    else if (
-      codeValue === "ArrowRight" &&
-      $mainHymnSlideIndex + 1 < $mainHymnSlides.length
-    ) {
-      console.log("Main Hymn Slide Index Going Up!");
+        if ($equivalentHymn === undefined) {
+          console.log("Looking for equivalency for");
 
-      mainHymnSlideIndex.update((val) => (val += 1));
+          let hymn = await getHymnEquivalency(
+            $mainHymn.number,
+            availableHymnals[0],
+            availableHymnals[1],
+          );
+
+          if (hymn instanceof Hymn) {
+            equivalentHymn.set(hymn);
+          } else {
+            console.log("No Equivalent Hymn for this one sorry...");
+          }
+        } else equivalentHymnSlides.set($equivalentHymn.getSlides());
+
+        break;
     }
   }
 
@@ -89,7 +100,7 @@
 
 <main>
   {#if $isReady}
-    <div>
+    <div class="horizontal">
       <HymnView slides={mainHymnSlides} slideIndex={mainHymnSlideIndex} />
       {#if $dualView && $equivalentHymn}
         <HymnView
@@ -98,7 +109,18 @@
         />
       {/if}
     </div>
+    <h4 style="text-align: center;">
+      {`Hymn Num: ${numbersPressed} | DualView: ${$dualView}`}
+    </h4>
   {:else}
     <h1 style="font-size: 60px;">Loading...</h1>
   {/if}
 </main>
+
+<style>
+  .horizontal {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+  }
+</style>

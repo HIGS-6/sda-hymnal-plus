@@ -35,20 +35,18 @@ export async function getHymn(number: number, hymnal: Hymnal): Promise<Hymn | st
   }
 }
 
-export async function getHymnals(): Promise<Array<Hymnal> | string> {
+export async function getHymnals(): Promise<Hymnal[] | string> {
   try {
-    const availableHymnals: Array<Hymnal> = [];
+    const availableHymnals: Hymnal[] = [];
 
-    const hymnalsResult = await pb.collection("hymnals").getFullList({
-      expand: 'language'
-    });
+    const hymnalsResult = await pb.collection("hymnals").getFullList();
 
     hymnalsResult.forEach(hymnalResult => {
       availableHymnals.push(
         new Hymnal(
           hymnalResult.id,
           hymnalResult.name,
-          hymnalResult.expand?.language.landName,
+          hymnalResult.language,
         ));
     });
 
@@ -58,3 +56,22 @@ export async function getHymnals(): Promise<Array<Hymnal> | string> {
   }
 }
 
+export async function getHymnEquivalency(number: number, originalHymnal: Hymnal, equivalentHymnal: Hymnal): Promise<Hymn | string> {
+  // What's Hymn 100 from Hymnal "SDA Hymnal (1985)"  in the Spanish Hymnal "Himnario Adventista (2010)"? - 55
+  try {
+    const result = await pb.collection("hymn_equivalencies").getFirstListItem(
+      `originalHymnNumber=${number}&&originalVersion="${originalHymnal.id}"&&
+      equivalentVersion="${equivalentHymnal.id}"||equivalentHymnNumber=${number}&&
+      equivalentVersion="${originalHymnal.id}"&&originalVersion="${equivalentHymnal.id}"
+      `
+    );
+
+
+    let hymn = await getHymn(number === result.originalHymnNumber ? result.equivalentHymnNumber : number, number === result.originalHymnNumber ? equivalentHymnal : originalHymnal) as Hymn;
+    console.log(`Equivalent Hymn is: ${hymn.title}`);
+
+    return hymn;
+  } catch (e) {
+    return `${e}`
+  }
+}
