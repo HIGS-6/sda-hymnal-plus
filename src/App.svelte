@@ -23,11 +23,11 @@
   let availableHymnals: Hymnal[] = [];
   let numbersPressed = "";
 
+  let syncSlides = [];
+
   async function handleInput(event: KeyboardEvent) {
     const codeValue = event.code;
     const key = event.key;
-
-    // console.log(`Key Pressed: ${codeValue}`);
 
     // Number Changed
     if (!Number.isNaN(parseInt(key))) {
@@ -115,8 +115,6 @@
   }
 
   async function initialize() {
-    // TODO: Implement Equivalent Hymn as well
-
     // Load Available Hymnals
     availableHymnals = (await getHymnals()) as Hymnal[];
 
