@@ -1,5 +1,6 @@
 <script>
     import FooterItem from "$lib/components/layout/FooterItem.svelte";
+    import { swapHymnals } from "$lib/services/keybindsService";
     import {
         secondaryHymnal,
         primaryHymnal,
@@ -11,9 +12,7 @@
 <!-- Primary Hymnal -->
 <FooterItem
     onclick={() => {
-        openChooseHymnalModal(() => {
-            // primaryHymnal.set();
-        });
+        openChooseHymnalModal("Choose the Primary Hymnal", true);
     }}
 >
     <!-- Icon -->
@@ -43,7 +42,7 @@
 
 {#if $viewMode >= 0}
     <!-- Swap Hymnals -->
-    <FooterItem onclick={() => {}}>
+    <FooterItem onclick={swapHymnals}>
         <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="currentColor"
@@ -58,7 +57,11 @@
     </FooterItem>
 
     <!-- Secondary Hymnal -->
-    <FooterItem onclick={() => {}}>
+    <FooterItem
+        onclick={() => {
+            openChooseHymnalModal("Choose the Secondary Hymnal", false);
+        }}
+    >
         <!-- Icon -->
         <svg
             class="text-secondaryD size-4 dark:text-white"

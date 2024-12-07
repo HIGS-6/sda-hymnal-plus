@@ -20,7 +20,7 @@ export function handleKeyboardEvents(event: KeyboardEvent) {
     return;
   }
 
-  console.log(`Got Input: ${event.code}`);
+  // console.log(`Got Input: ${event.code}`);
 
   const codeValue = event.code;
   const key = event.key;
@@ -60,7 +60,16 @@ export function handleKeyboardEvents(event: KeyboardEvent) {
     case "KeyV":
       setVerticalView();
       break;
+    case "KeyS":
+      swapHymnals();
+      break;
   }
+}
+
+export function swapHymnals() {
+  const temp = get(primaryHymnal);
+  primaryHymnal.set(get(secondaryHymnal));
+  secondaryHymnal.set(temp);
 }
 
 export function addNumber(newNumber: string) {
@@ -129,6 +138,9 @@ export function previousSlide() {
 }
 
 export function nextSlide() {
+  const hymn = get(primaryHymn);
+  if (!hymn) return;
+
   if (get(primarySlideIndex) + 1 < get(primaryHymn)!.slides.length)
     primarySlideIndex.update((val) => (val += 1));
   if (get(viewMode) > 0) {

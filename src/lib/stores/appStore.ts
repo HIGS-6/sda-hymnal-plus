@@ -24,3 +24,6 @@ export const secondaryHymnLoading = writable<boolean>(false);
 // Modal
 export const modalOpen = writable<boolean>(false);
 export const modalMode = writable<number>(0);
+export const modalTitle = writable<string>("");
+export const modalBody = writable<string>("");
+export const modalIsPrimaryHymnal = writable<boolean>(true);

@@ -3,7 +3,10 @@
 import PocketBase, { type RecordModel } from "pocketbase";
 import { Hymn, Hymnal } from "$lib/models";
 
-const pb = new PocketBase("https://sda-api.pockethost.io/");
+const LOCAL_API_URL = "http://127.0.0.1:8090";
+const ONLINE_API_URL = "http://127.0.0.1:8090";
+
+const pb = new PocketBase(LOCAL_API_URL);
 
 export async function getHymn(number: number, hymnal: Hymnal): Promise<Hymn> {
   let lyricsRecord: RecordModel[];
@@ -51,8 +54,6 @@ export async function getHymnEquivalency(
       `originalHymnNumber=${number}&&originalVersion.id="${originalHymnal.id}"&&equivalentVersion.id="${equivalentHymnal.id}" || equivalentHymnNumber=${number}&&equivalentVersion.id="${originalHymnal.id}"&&originalVersion.id="${equivalentHymnal.id}"`,
     );
 
-  console.log(`Equivalent Hymn Fetched, Retrieving\n${result}`);
-
   let hymn;
   if (number === result.originalHymnNumber) {
     hymn = await getHymn(result.equivalentHymnNumber, equivalentHymnal);
@@ -61,4 +62,72 @@ export async function getHymnEquivalency(
   }
 
   return hymn;
+}
+
+export async function getEquivalentHymns(
+  originalNumber: number,
+  originalHymnal: Hymnal,
+  targetHymnal: Hymnal,
+): Promise<{ original: Hymn; equivalent: Hymn }> {
+  const result = await pb.collection("hymn_equivalencies").getFirstListItem(
+    `
+    originalHymn.number=${originalNumber}&&originalHymnal="${originalHymnal.id}"&&equivalentHymnal="${targetHymnal.id}"||
+    equivalentHymn.number=${originalNumber}&&equivalentHymnal="${originalHymnal.id}"&&originalHymnal="${targetHymnal.id}"
+    `,
+    {
+      expand:
+        "originalHymn.version, equivalentHymn.version, originalHymn.hymn_lyrics_via_hymn, equivalentHymn.hymn_lyrics_via_hymn",
+    },
+  );
+
+  let originalHymn;
+  let equivalentHymn;
+
+  if (result.expand?.originalHymn.number === originalNumber) {
+    const rawOriginal = result.expand?.originalHymn;
+    originalHymn = new Hymn(
+      rawOriginal.id,
+      rawOriginal.title,
+      rawOriginal.number,
+      rawOriginal.expand?.hymn_lyrics_via_hymn.map((lyric: any) => ({
+        context: lyric.context,
+        content: lyric.content,
+      })),
+    );
+
+    const rawEquivalent = result.expand?.equivalentHymn;
+    equivalentHymn = new Hymn(
+      rawEquivalent.id,
+      rawEquivalent.title,
+      rawEquivalent.number,
+      rawEquivalent.expand?.hymn_lyrics_via_hymn.map((lyric: any) => ({
+        context: lyric.context,
+        content: lyric.content,
+      })),
+    );
+  } else {
+    const rawOriginal = result.expand?.equivalentHymn;
+    originalHymn = new Hymn(
+      rawOriginal.id,
+      rawOriginal.title,
+      rawOriginal.number,
+      rawOriginal.expand?.hymn_lyrics_via_hymn.map((lyric: any) => ({
+        context: lyric.context,
+        content: lyric.content,
+      })),
+    );
+
+    const rawEquivalent = result.expand?.originalHymn;
+    equivalentHymn = new Hymn(
+      rawEquivalent.id,
+      rawEquivalent.title,
+      rawEquivalent.number,
+      rawEquivalent.expand?.hymn_lyrics_via_hymn.map((lyric: any) => ({
+        context: lyric.context,
+        content: lyric.content,
+      })),
+    );
+  }
+
+  return { original: originalHymn, equivalent: equivalentHymn };
 }
