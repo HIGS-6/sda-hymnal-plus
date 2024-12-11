@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getHymnals } from "$lib/services/sdaApiService";
+    import { getAvailableHymnals } from "$lib/services/sdaApiService";
     import SdaIcon from "$lib/components/SdaIcon.svelte";
     import { closeModal } from "$lib/utils/modal";
     import { onMount } from "svelte";
@@ -14,16 +14,16 @@
     let searchInput: HTMLElement | undefined = $state();
 
     onMount(async () => {
+        searchInput?.focus();
+
         if (!allHymnals) {
-            availableHymnals.set(await getHymnals());
+            availableHymnals.set(await getAvailableHymnals());
             allHymnals = $availableHymnals;
         }
-
-        searchInput?.focus();
     });
 </script>
 
-<div class="flex flex-col items-center space-y-10">
+<div class="flex flex-col items-center space-y-10 max-w-screen-xl w-full">
     <!-- Search -->
     <div
         class="flex items-center max-w-screen-xl w-full bg-primary dark:bg-highlightD rounded-full shadow-md px-4 py-2"
@@ -47,19 +47,21 @@
     </div>
 
     <div
-        class="max-w-screen-xl max-h-screen/2 w-full h-full bg-primary dark:bg-highlightD rounded-sm shadow-md px-4 py-2 text-primaryD dark:text-primary"
+        class="max-w-screen-xl max-h-screen/2 w-full h-full bg-primary dark:bg-highlightD rounded-lg shadow-md px-2 py-2 text-primaryD dark:text-primary"
     >
         {#if !allHymnals}
             <SdaIcon loading={true} />
         {:else}
-            <ul class="flex flex-col space-y-5">
+            <ul class="flex flex-col space-y-2">
                 {#each allHymnals as hymnal}
                     <li>
                         <button
-                            disabled={($modalIsPrimaryHymnal &&
-                                $primaryHymnal === hymnal) ||
-                                (!$modalIsPrimaryHymnal &&
-                                    $secondaryHymnal === hymnal)}
+                            class="bg-primary dark:{$primaryHymnal === hymnal ||
+                            $secondaryHymnal === hymnal
+                                ? 'bg-primary bg-opacity-20'
+                                : 'bg-primaryD'} p-3 w-full text-left"
+                            disabled={$primaryHymnal === hymnal ||
+                                $secondaryHymnal === hymnal}
                             onclick={() => {
                                 if ($modalIsPrimaryHymnal) {
                                     primaryHymnal.set(hymnal);

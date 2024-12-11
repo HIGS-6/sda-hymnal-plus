@@ -1,4 +1,8 @@
-import { getHymn, getHymnEquivalency } from "./sdaApiService";
+import {
+  getHymnEquivalencyFromHymn,
+  getEquivalentHymns,
+  getHymnFromNumber,
+} from "./sdaApiService";
 import { get } from "svelte/store";
 import {
   secondaryHymnLoading,
@@ -20,8 +24,6 @@ export function handleKeyboardEvents(event: KeyboardEvent) {
     return;
   }
 
-  // console.log(`Got Input: ${event.code}`);
-
   const codeValue = event.code;
   const key = event.key;
 
@@ -31,6 +33,7 @@ export function handleKeyboardEvents(event: KeyboardEvent) {
     return;
   }
 
+  // Actula Keyboard Events
   switch (codeValue) {
     // Empty View
     case "Escape":
@@ -67,9 +70,15 @@ export function handleKeyboardEvents(event: KeyboardEvent) {
 }
 
 export function swapHymnals() {
-  const temp = get(primaryHymnal);
+  // Hymnals
+  const tempHymnal = get(primaryHymnal);
   primaryHymnal.set(get(secondaryHymnal));
-  secondaryHymnal.set(temp);
+  secondaryHymnal.set(tempHymnal);
+
+  // Hymns
+  const tempHymn = get(primaryHymn);
+  primaryHymn.set(get(secondaryHymn));
+  secondaryHymn.set(tempHymn);
 }
 
 export function addNumber(newNumber: string) {
@@ -86,48 +95,84 @@ export function resetView() {
 }
 
 export async function findHymn() {
-  if (get(primaryHymnLoading)) return;
+  const pHymnal = get(primaryHymnal);
+  if (!pHymnal) {
+    // TODO: Add User Feedback
+    console.error("No Hymnal Selected Error.");
+    return;
+  }
+
+  const pHymn = get(primaryHymn);
+  const sHymnal = get(secondaryHymnal);
+  const multipleView = get(viewMode) >= 0;
 
   // Get Hymn Number
   const number = parseInt(get(hymnNumber));
-  if (number <= 0) return;
-
-  // Get Primary Hymnal
-  const pHymnal = get(primaryHymnal);
-  if (!pHymnal) return;
-
-  // Get Primary Hymn Data
-  primaryHymnLoading.set(true);
-  try {
-    const hymn = await getHymn(number, pHymnal);
-    primaryHymn.set(hymn);
-  } catch (error) {
-    primaryHymn.set(undefined);
+  if (isNaN(number) || number <= 0 || number > 999) {
+    // TODO: Add User Feedback
+    console.error("Invalid Hymn Number Error.");
+    // Reset Numbers Pressed
+    hymnNumber.set("");
+    return;
   }
 
-  // DualView mode enabled
-  if (get(viewMode) >= 0) {
-    secondaryHymnLoading.set(true);
-    const sHymnal = get(secondaryHymnal);
-    // if (!sHymnal) continue;
+  // No Primary Hymn | Single View Mode -> Only Get Primary Hymn
+  if ((!pHymn && !multipleView) || (pHymn?.number != number && !multipleView)) {
+    console.log("Finding Primary Hymn...");
+    // Loading
+    primaryHymnLoading.set(true);
 
-    // Get Hymn Data
+    // Get Hymn
     try {
-      const equivalentHymn = await getHymnEquivalency(
+      const hymn = await getHymnFromNumber(number, pHymnal);
+      primaryHymn.set(hymn);
+      secondaryHymn.set(undefined);
+    } catch (error) {
+      console.error(`No Hymn Found:\n${error}`);
+      // TODO: Add User Feedback
+    }
+
+    primaryHymnLoading.set(false);
+  }
+  // No Primary Hymn or Current Primary Hymn Number is different from new | Multiple View Mode -> Get Both Primary and Equivalent Hymn
+  else if ((!pHymn || pHymn?.number !== number) && multipleView) {
+    console.log("Finding Primary And Equivalent Hymn...");
+
+    if (!sHymnal) {
+      // TODO: Add User Feedback
+      console.error("No Secondary Hymnal Selected Error.");
+      return;
+    }
+
+    // Loading
+    primaryHymnLoading.set(true);
+    secondaryHymnLoading.set(true);
+
+    try {
+      // Get Both Primary and Equivalent Hymn from a single request
+      const { originalHymn, equivalentHymn } = await getEquivalentHymns(
         number,
         pHymnal,
-        sHymnal!,
+        sHymnal,
       );
+
+      primaryHymn.set(originalHymn);
       secondaryHymn.set(equivalentHymn);
     } catch (error) {
-      secondaryHymn.set(undefined);
+      console.error(`No Hymn and/or Equivalent Hymn Found:\n${error}`);
+      // TODO: Add User Feedback
     }
+
+    primaryHymnLoading.set(false);
+    secondaryHymnLoading.set(false);
+  }
+  // Re-entered the same Hymn Number
+  else if (pHymn && pHymn.number === number) {
+    console.error("Hymn Number is the same");
   }
 
   // Reset Numbers Pressed
   hymnNumber.set("");
-  primaryHymnLoading.set(false);
-  secondaryHymnLoading.set(false);
 }
 
 export function previousSlide() {
@@ -148,22 +193,56 @@ export function nextSlide() {
   }
 }
 
-export function setHorizontalView() {
+export async function setHorizontalView() {
   if (get(viewMode) === 1) {
     viewMode.set(-1);
     return;
   }
 
   viewMode.set(1);
-  // TODO: Equivalent Hymn Mode
+
+  // Get Equivalent Hymn Data
+  const pHymn = get(primaryHymn);
+  const sHymnal = get(secondaryHymnal);
+  if (!get(secondaryHymn) && pHymn && sHymnal) {
+    console.log("Enabled Horizontal View with an Hymn, loading equivalency...");
+    secondaryHymnLoading.set(true);
+
+    try {
+      const equivalentHymn = await getHymnEquivalencyFromHymn(pHymn, sHymnal);
+
+      secondaryHymn.set(equivalentHymn);
+    } catch (error) {
+      secondaryHymn.set(undefined);
+    }
+
+    secondaryHymnLoading.set(false);
+  }
 }
 
-export function setVerticalView() {
+export async function setVerticalView() {
   if (get(viewMode) === 0) {
     viewMode.set(-1);
     return;
   }
 
   viewMode.set(0);
-  // TODO: Equivalent Hymn Mode
+
+  // Get Equivalent Hymn Data
+  const pHymn = get(primaryHymn);
+  const sHymnal = get(secondaryHymnal);
+  if (!get(secondaryHymn) && pHymn && sHymnal) {
+    console.log("Enabled Vertical View with an Hymn, loading equivalency...");
+    secondaryHymnLoading.set(true);
+
+    try {
+      const equivalentHymn = await getHymnEquivalencyFromHymn(pHymn, sHymnal);
+
+      secondaryHymn.set(equivalentHymn);
+    } catch (error) {
+      secondaryHymn.set(undefined);
+    }
+
+    secondaryHymnLoading.set(false);
+  }
 }

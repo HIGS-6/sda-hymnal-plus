@@ -1,4 +1,3 @@
-import { getHymnals } from "$lib/services/sdaApiService";
 import type { Hymn, Hymnal } from "$lib/models";
 import { get, writable } from "svelte/store";
 

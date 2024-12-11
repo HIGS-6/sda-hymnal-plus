@@ -1,21 +1,24 @@
-import { Slide } from "./";
+import { Hymnal, Slide } from "./";
 
 export default class Hymn {
   id: string;
   title: string;
   number: number;
   lyrics: Map<string, string>;
+  hymnal: string;
   slides: Slide[];
   constructor(
     id: string,
     title: string,
     number: number,
     lyrics: Map<string, string>,
+    hymnal: string,
   ) {
     this.id = id;
     this.title = title;
     this.number = number;
     this.lyrics = lyrics;
+    this.hymnal = hymnal;
     this.slides = this.getSlides();
   }
 
